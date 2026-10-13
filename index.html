@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>名人對決：雙人記憶翻牌大作戰</title>
+  <title>真人對決：雙人記憶翻牌大作戰</title>
   <style>
     * {
       box-sizing: border-box;
@@ -21,7 +21,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding: 12px;
+      padding: 10px;
       position: relative;
     }
     #fxCanvas {
@@ -40,7 +40,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     header {
       width: 100%;
@@ -49,7 +49,7 @@
       align-items: center;
     }
     .game-title {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       font-weight: 900;
       background: linear-gradient(135deg, #38bdf8, #818cf8, #fb7185);
       -webkit-background-clip: text;
@@ -59,10 +59,10 @@
       background: #1e293b;
       border: 1px solid #475569;
       color: #e2e8f0;
-      padding: 6px 12px;
+      padding: 5px 10px;
       border-radius: 8px;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: bold;
     }
     .scoreboard {
@@ -75,7 +75,7 @@
       background: #111827;
       border: 2px solid #1f2937;
       border-radius: 12px;
-      padding: 10px 14px;
+      padding: 8px 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -85,18 +85,18 @@
     .score-card.active-p1 {
       opacity: 1;
       border-color: #3b82f6;
-      box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.45);
     }
     .score-card.active-p2 {
       opacity: 1;
       border-color: #f43f5e;
-      box-shadow: 0 0 16px rgba(244, 63, 94, 0.4);
+      box-shadow: 0 0 16px rgba(244, 63, 94, 0.45);
     }
     .player-tag { display: flex; flex-direction: column; }
-    .player-name-p1 { color: #60a5fa; font-weight: 800; font-size: 0.95rem; }
-    .player-name-p2 { color: #fb7185; font-weight: 800; font-size: 0.95rem; }
-    .turn-label { font-size: 0.75rem; color: #94a3b8; }
-    .score-num { font-size: 2rem; font-weight: 900; font-family: monospace; }
+    .player-name-p1 { color: #60a5fa; font-weight: 800; font-size: 0.9rem; }
+    .player-name-p2 { color: #fb7185; font-weight: 800; font-size: 0.9rem; }
+    .turn-label { font-size: 0.7rem; color: #94a3b8; }
+    .score-num { font-size: 1.8rem; font-weight: 900; font-family: monospace; }
     .score-p1 { color: #60a5fa; }
     .score-p2 { color: #fb7185; }
 
@@ -106,14 +106,14 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 8px;
       background: #111827;
-      padding: 10px;
-      border-radius: 16px;
+      padding: 8px;
+      border-radius: 14px;
       border: 2px solid #1f2937;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     }
     .card-wrap {
       width: 100%;
-      height: 95px;
+      height: 96px;
       perspective: 1000px;
       cursor: pointer;
       position: relative;
@@ -156,7 +156,7 @@
       border-color: #64748b;
     }
     .card-back-icon {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 900;
       color: #818cf8;
       text-shadow: 0 0 8px rgba(129, 140, 248, 0.6);
@@ -165,23 +165,26 @@
       background: #020617;
       transform: rotateY(180deg);
       border: 2px solid #475569;
+      position: relative;
     }
-    .card-front canvas {
+    .card-front img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
+      pointer-events: none;
     }
     .card-front .card-title {
       position: absolute;
       bottom: 0;
       inset-x: 0;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.75);
       font-size: 0.65rem;
       font-weight: bold;
       text-align: center;
       padding: 2px 0;
       color: #f8fafc;
+      text-shadow: 0 1px 2px black;
     }
     .card-front.matched-p1 {
       border: 3px solid #3b82f6 !important;
@@ -208,14 +211,14 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: #64748b;
     }
     .btn-reset {
       background: #334155;
       color: #f8fafc;
       border: none;
-      padding: 8px 16px;
+      padding: 6px 14px;
       border-radius: 8px;
       font-weight: bold;
       cursor: pointer;
@@ -246,11 +249,11 @@
       max-width: 320px;
       width: 90%;
     }
-    .modal-box h2 { font-size: 1.6rem; margin-bottom: 6px; }
-    .modal-box p { font-size: 0.9rem; color: #9ca3af; margin-bottom: 18px; }
+    .modal-box h2 { font-size: 1.5rem; margin-bottom: 6px; }
+    .modal-box p { font-size: 0.85rem; color: #9ca3af; margin-bottom: 18px; }
     .modal-btn {
       width: 100%;
-      padding: 12px;
+      padding: 10px;
       background: linear-gradient(135deg, #3b82f6, #f43f5e);
       border: none;
       border-radius: 10px;
@@ -306,117 +309,96 @@
   </div>
 
   <script>
-    const PORTRAIT_TYPES = [
-      { id: 'p01', name: '正襟危坐', angle: 0, mouth: 'neutral', hand: false },
-      { id: 'p02', name: '微傾側顏', angle: -0.15, mouth: 'neutral', hand: false },
-      { id: 'p03', name: '深沉凝視', angle: -0.25, mouth: 'neutral', hand: false },
-      { id: 'p04', name: '思緒放空', angle: -0.32, mouth: 'neutral', hand: false },
-      { id: 'p05', name: '托腮沉思', angle: 0, mouth: 'neutral', hand: true },
-      { id: 'p06', name: '燦爛笑靨', angle: -0.2, mouth: 'smile', hand: false },
-      { id: 'p07', name: '驚呼大叫', angle: -0.25, mouth: 'gasp', hand: false },
-      { id: 'p08', name: '熱情暢談', angle: -0.18, mouth: 'talk', hand: false }
+    /* ==========================================================
+       1. 肖像資源定義 (精確配對「near連續圖」資料夾與多重候選路徑)
+       ========================================================== */
+    const PHOTO_CONFIGS = [
+      {
+        id: 'p01',
+        name: '正襟凝視',
+        sources: [
+          'near連續圖/NEAR01.jpg',
+          'near連續圖/near01.jpg',
+          'near連續圖/NEAR01_3.jpg',
+          'NEAR01.jpg',
+          'near01.jpg'
+        ]
+      },
+      {
+        id: 'p02',
+        name: '微側側顏',
+        sources: [
+          'near連續圖/near02.jpg',
+          'near連續圖/NEAR02.jpg',
+          'near連續圖/near02_3.jpg',
+          'near02.jpg'
+        ]
+      },
+      {
+        id: 'p03',
+        name: '抬頭注視',
+        sources: [
+          'near連續圖/near03.jpg',
+          'near連續圖/NEAR03.jpg',
+          'near連續圖/near03_3.jpg',
+          'near03.jpg'
+        ]
+      },
+      {
+        id: 'p04',
+        name: '仰角微張',
+        sources: [
+          'near連續圖/near04.jpg',
+          'near連續圖/NEAR04.jpg',
+          'near連續圖/near04_3.jpg',
+          'near04.jpg'
+        ]
+      },
+      {
+        id: 'p05',
+        name: '手勢托腮',
+        sources: [
+          'near連續圖/near05.jpg',
+          'near連續圖/NEAR05.jpg',
+          'near連續圖/near05_3.jpg',
+          'near05.jpg'
+        ]
+      },
+      {
+        id: 'p06',
+        name: '燦爛笑靨',
+        sources: [
+          'near連續圖/near06.jpg',
+          'near連續圖/NEAR06.jpg',
+          'near連續圖/near06_3.jpg',
+          'near06.jpg'
+        ]
+      },
+      {
+        id: 'p07',
+        name: '驚訝大呼',
+        sources: [
+          'near連續圖/near07.jpg',
+          'near連續圖/NEAR07.jpg',
+          'near連續圖/near07_3.jpg',
+          'near07.jpg'
+        ]
+      },
+      {
+        id: 'p08',
+        name: '生動對談',
+        sources: [
+          'near連續圖/near08.jpg',
+          'near連續圖/NEAR08.jpg',
+          'near連續圖/near08_3.jpg',
+          'near08.jpg'
+        ]
+      }
     ];
 
-    function createPortraitCanvas(config) {
-      const cvs = document.createElement('canvas');
-      cvs.width = 160;
-      cvs.height = 160;
-      const ctx = cvs.getContext('2d');
-
-      const bgGrad = ctx.createLinearGradient(0, 0, 160, 160);
-      bgGrad.addColorStop(0, '#334155');
-      bgGrad.addColorStop(1, '#1e293b');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, 160, 160);
-
-      ctx.save();
-      ctx.translate(80, 95);
-      ctx.rotate(config.angle);
-
-      ctx.fillStyle = '#f6d3b3';
-      ctx.fillRect(-18, 15, 36, 45);
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(-35, 55);
-      ctx.lineTo(0, 32);
-      ctx.lineTo(35, 55);
-      ctx.lineTo(0, 65);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = '#fcdbb8';
-      ctx.beginPath();
-      ctx.ellipse(0, -10, 38, 48, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#1c1917';
-      ctx.beginPath();
-      ctx.ellipse(0, -32, 40, 28, 0, Math.PI, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(-34, -18, 12, 0, Math.PI * 2);
-      ctx.arc(34, -18, 12, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.strokeRect(-30, -16, 22, 13);
-      ctx.strokeRect(8, -16, 22, 13);
-      ctx.moveTo(-8, -10);
-      ctx.lineTo(8, -10);
-      ctx.stroke();
-
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.arc(-19, -9, 3, 0, Math.PI * 2);
-      ctx.arc(19, -9, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#e29d72';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, -9);
-      ctx.lineTo(2, 4);
-      ctx.lineTo(-4, 7);
-      ctx.stroke();
-
-      ctx.fillStyle = '#b91c1c';
-      ctx.strokeStyle = '#b91c1c';
-      ctx.lineWidth = 2;
-      if (config.mouth === 'neutral') {
-        ctx.beginPath();
-        ctx.moveTo(-10, 16);
-        ctx.lineTo(10, 16);
-        ctx.stroke();
-      } else if (config.mouth === 'smile') {
-        ctx.beginPath();
-        ctx.arc(0, 13, 10, 0.1, Math.PI - 0.1);
-        ctx.stroke();
-      } else if (config.mouth === 'gasp') {
-        ctx.beginPath();
-        ctx.ellipse(0, 18, 8, 12, 0, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (config.mouth === 'talk') {
-        ctx.beginPath();
-        ctx.ellipse(0, 16, 8, 6, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      if (config.hand) {
-        ctx.fillStyle = '#fcdbb8';
-        ctx.strokeStyle = '#e29d72';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(12, 28, 14, 20, -0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      }
-
-      ctx.restore();
-      return cvs;
-    }
-
+    /* ==========================================================
+       2. Web Audio API 合成音效引擎
+       ========================================================== */
     class AudioDriver {
       constructor() {
         this.ctx = null;
@@ -464,6 +446,9 @@
     }
     const audio = new AudioDriver();
 
+    /* ==========================================================
+       3. 粒子特效層 (自動釋放記憶體)
+       ========================================================== */
     const fxCanvas = document.getElementById('fxCanvas');
     const fxCtx = fxCanvas.getContext('2d');
     let particles = [];
@@ -513,11 +498,14 @@
     }
     updateParticles();
 
+    /* ==========================================================
+       4. 雙人對戰狀態機 (Turn-based State Loop)
+       ========================================================== */
     const State = {
       deck: [],
       flipped: [],
       matchedPairs: 0,
-      turn: 1,
+      turn: 1, // 1: Player A, 2: Player B
       scores: { 1: 0, 2: 0 },
       locked: false
     };
@@ -543,7 +531,7 @@
 
     function initDeck() {
       const cards = [];
-      PORTRAIT_TYPES.forEach(item => {
+      PHOTO_CONFIGS.forEach(item => {
         cards.push({ id: item.id + '_1', pair: item.id, meta: item, isFlipped: false, isMatched: false, winner: null });
         cards.push({ id: item.id + '_2', pair: item.id, meta: item, isFlipped: false, isMatched: false, winner: null });
       });
@@ -568,6 +556,27 @@
       }
     }
 
+    // 建立具備多重路徑遞補的圖片節點
+    function createRobustImage(sources, altName) {
+      const img = document.createElement('img');
+      img.alt = altName;
+      let currentIndex = 0;
+
+      function tryNext() {
+        if (currentIndex < sources.length) {
+          img.src = encodeURI(sources[currentIndex]);
+          currentIndex++;
+        }
+      }
+
+      img.onerror = () => {
+        tryNext();
+      };
+
+      tryNext();
+      return img;
+    }
+
     function renderCards() {
       gridEl.innerHTML = '';
       State.deck.forEach((card, idx) => {
@@ -585,12 +594,13 @@
         const front = document.createElement('div');
         front.className = 'card-face card-front';
 
-        const canvas = createPortraitCanvas(card.meta);
+        // 綁定真實照片 (自動由 near連續圖/... 載入)
+        const img = createRobustImage(card.meta.sources, card.meta.name);
         const title = document.createElement('div');
         title.className = 'card-title';
         title.textContent = card.meta.name;
 
-        front.appendChild(canvas);
+        front.appendChild(img);
         front.appendChild(title);
 
         inner.appendChild(back);
@@ -628,6 +638,7 @@
         const clickY = rect.top + rect.height / 2;
 
         if (c1.card.pair === c2.card.pair) {
+          // 配對成功
           setTimeout(() => {
             c1.card.isMatched = true;
             c2.card.isMatched = true;
@@ -654,6 +665,7 @@
             }
           }, 400);
         } else {
+          // 配對失敗
           setTimeout(() => audio.mismatch(), 350);
           setTimeout(() => {
             c1.card.isFlipped = false;
