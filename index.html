@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>名人對決：雙人記憶翻牌大作戰</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 12px;
+      position: relative;
+    }
+    #fxCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none !important;
+      z-index: 1;
+    }
+    .game-wrapper {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .game-title {
+      font-size: 1.25rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #fb7185);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .btn-sound {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: 100%;
+    }
+    .score-card {
+      background: #111827;
+      border: 2px solid #1f2937;
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      opacity: 0.45;
+      transition: all 0.25s ease;
+    }
+    .score-card.active-p1 {
+      opacity: 1;
+      border-color: #3b82f6;
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+    }
+    .score-card.active-p2 {
+      opacity: 1;
+      border-color: #f43f5e;
+      box-shadow: 0 0 16px rgba(244, 63, 94, 0.4);
+    }
+    .player-tag { display: flex; flex-direction: column; }
+    .player-name-p1 { color: #60a5fa; font-weight: 800; font-size: 0.95rem; }
+    .player-name-p2 { color: #fb7185; font-weight: 800; font-size: 0.95rem; }
+    .turn-label { font-size: 0.75rem; color: #94a3b8; }
+    .score-num { font-size: 2rem; font-weight: 900; font-family: monospace; }
+    .score-p1 { color: #60a5fa; }
+    .score-p2 { color: #fb7185; }
+
+    .grid-container {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      background: #111827;
+      padding: 10px;
+      border-radius: 16px;
+      border: 2px solid #1f2937;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+    .card-wrap {
+      width: 100%;
+      height: 95px;
+      perspective: 1000px;
+      cursor: pointer;
+      position: relative;
+      touch-action: manipulation;
+    }
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 10px;
+    }
+    .card-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .card-back {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 2px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s;
+    }
+    .card-back:hover {
+      border-color: #64748b;
+    }
+    .card-back-icon {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #818cf8;
+      text-shadow: 0 0 8px rgba(129, 140, 248, 0.6);
+    }
+    .card-front {
+      background: #020617;
+      transform: rotateY(180deg);
+      border: 2px solid #475569;
+    }
+    .card-front canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-front .card-title {
+      position: absolute;
+      bottom: 0;
+      inset-x: 0;
+      background: rgba(0, 0, 0, 0.85);
+      font-size: 0.65rem;
+      font-weight: bold;
+      text-align: center;
+      padding: 2px 0;
+      color: #f8fafc;
+    }
+    .card-front.matched-p1 {
+      border: 3px solid #3b82f6 !important;
+      box-shadow: 0 0 12px #3b82f6;
+    }
+    .card-front.matched-p2 {
+      border: 3px solid #f43f5e !important;
+      box-shadow: 0 0 12px #f43f5e;
+    }
+
+    .banner {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1e293b;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      text-align: center;
+    }
+    footer {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .btn-reset {
+      background: #334155;
+      color: #f8fafc;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-box {
+      background: #111827;
+      border: 2px solid #374151;
+      border-radius: 18px;
+      padding: 24px;
+      text-align: center;
+      max-width: 320px;
+      width: 90%;
+    }
+    .modal-box h2 { font-size: 1.6rem; margin-bottom: 6px; }
+    .modal-box p { font-size: 0.9rem; color: #9ca3af; margin-bottom: 18px; }
+    .modal-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #3b82f6, #f43f5e);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="fxCanvas"></canvas>
+
+  <div class="game-wrapper">
+    <header>
+      <div class="game-title">✦ MEMORY BATTLE ✦</div>
+      <button id="soundToggle" class="btn-sound">🔊 音效: 開</button>
+    </header>
+
+    <div class="scoreboard">
+      <div id="p1Card" class="score-card active-p1">
+        <div class="player-tag">
+          <span class="player-name-p1">玩家 A</span>
+          <span id="p1TurnTip" class="turn-label">思考行動中...</span>
+        </div>
+        <div id="p1Score" class="score-num score-p1">0</div>
+      </div>
+      <div id="p2Card" class="score-card">
+        <div class="player-tag">
+          <span class="player-name-p2">玩家 B</span>
+          <span id="p2TurnTip" class="turn-label">等待對手</span>
+        </div>
+        <div id="p2Score" class="score-num score-p2">0</div>
+      </div>
+    </div>
+
+    <div id="grid" class="grid-container"></div>
+    <div id="banner" class="banner">玩家 A 回合：請翻開第 1 張牌</div>
+
+    <footer>
+      <span>翻對得 1 分且保留回合；翻錯換人</span>
+      <button id="restartBtn" class="btn-reset">重新洗牌</button>
+    </footer>
+  </div>
+
+  <div id="modal" class="modal">
+    <div class="modal-box">
+      <div style="font-size: 3rem; margin-bottom: 6px;" id="modalIcon">🏆</div>
+      <h2 id="modalTitle">玩家 A 獲勝！</h2>
+      <p id="modalDesc">最終比數 5 比 3！</p>
+      <button id="modalRestartBtn" class="modal-btn">再戰一局</button>
+    </div>
+  </div>
+
+  <script>
+    const PORTRAIT_TYPES = [
+      { id: 'p01', name: '正襟危坐', angle: 0, mouth: 'neutral', hand: false },
+      { id: 'p02', name: '微傾側顏', angle: -0.15, mouth: 'neutral', hand: false },
+      { id: 'p03', name: '深沉凝視', angle: -0.25, mouth: 'neutral', hand: false },
+      { id: 'p04', name: '思緒放空', angle: -0.32, mouth: 'neutral', hand: false },
+      { id: 'p05', name: '托腮沉思', angle: 0, mouth: 'neutral', hand: true },
+      { id: 'p06', name: '燦爛笑靨', angle: -0.2, mouth: 'smile', hand: false },
+      { id: 'p07', name: '驚呼大叫', angle: -0.25, mouth: 'gasp', hand: false },
+      { id: 'p08', name: '熱情暢談', angle: -0.18, mouth: 'talk', hand: false }
+    ];
+
+    function createPortraitCanvas(config) {
+      const cvs = document.createElement('canvas');
+      cvs.width = 160;
+      cvs.height = 160;
+      const ctx = cvs.getContext('2d');
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 160, 160);
+      bgGrad.addColorStop(0, '#334155');
+      bgGrad.addColorStop(1, '#1e293b');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, 160, 160);
+
+      ctx.save();
+      ctx.translate(80, 95);
+      ctx.rotate(config.angle);
+
+      ctx.fillStyle = '#f6d3b3';
+      ctx.fillRect(-18, 15, 36, 45);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(-35, 55);
+      ctx.lineTo(0, 32);
+      ctx.lineTo(35, 55);
+      ctx.lineTo(0, 65);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#fcdbb8';
+      ctx.beginPath();
+      ctx.ellipse(0, -10, 38, 48, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#1c1917';
+      ctx.beginPath();
+      ctx.ellipse(0, -32, 40, 28, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(-34, -18, 12, 0, Math.PI * 2);
+      ctx.arc(34, -18, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.strokeRect(-30, -16, 22, 13);
+      ctx.strokeRect(8, -16, 22, 13);
+      ctx.moveTo(-8, -10);
+      ctx.lineTo(8, -10);
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(-19, -9, 3, 0, Math.PI * 2);
+      ctx.arc(19, -9, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#e29d72';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -9);
+      ctx.lineTo(2, 4);
+      ctx.lineTo(-4, 7);
+      ctx.stroke();
+
+      ctx.fillStyle = '#b91c1c';
+      ctx.strokeStyle = '#b91c1c';
+      ctx.lineWidth = 2;
+      if (config.mouth === 'neutral') {
+        ctx.beginPath();
+        ctx.moveTo(-10, 16);
+        ctx.lineTo(10, 16);
+        ctx.stroke();
+      } else if (config.mouth === 'smile') {
+        ctx.beginPath();
+        ctx.arc(0, 13, 10, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+      } else if (config.mouth === 'gasp') {
+        ctx.beginPath();
+        ctx.ellipse(0, 18, 8, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (config.mouth === 'talk') {
+        ctx.beginPath();
+        ctx.ellipse(0, 16, 8, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (config.hand) {
+        ctx.fillStyle = '#fcdbb8';
+        ctx.strokeStyle = '#e29d72';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(12, 28, 14, 20, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.restore();
+      return cvs;
+    }
+
+    class AudioDriver {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      unlock() {
+        if (!this.ctx) {
+          const Cls = window.AudioContext || window.webkitAudioContext;
+          if (Cls) this.ctx = new Cls();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      tone(freq, type = 'sine', duration = 0.15, vol = 0.2) {
+        if (!this.enabled) return;
+        this.unlock();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      }
+      flip() { this.tone(480, 'triangle', 0.08, 0.15); }
+      mismatch() {
+        this.tone(200, 'sawtooth', 0.12, 0.15);
+        setTimeout(() => this.tone(150, 'sawtooth', 0.2, 0.15), 100);
+      }
+      match() {
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          setTimeout(() => this.tone(f, 'sine', 0.25, 0.18), i * 70);
+        });
+      }
+      win() {
+        [523, 659, 783, 1046, 1318].forEach((f, i) => {
+          setTimeout(() => this.tone(f, 'triangle', 0.35, 0.22), i * 110);
+        });
+      }
+    }
+    const audio = new AudioDriver();
+
+    const fxCanvas = document.getElementById('fxCanvas');
+    const fxCtx = fxCanvas.getContext('2d');
+    let particles = [];
+    function resizeFx() {
+      fxCanvas.width = window.innerWidth;
+      fxCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeFx);
+    resizeFx();
+
+    function spawnBurst(x, y, color) {
+      for (let i = 0; i < 24; i++) {
+        const rad = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 5;
+        particles.push({
+          x, y,
+          vx: Math.cos(rad) * speed,
+          vy: Math.sin(rad) * speed - 1,
+          color,
+          alpha: 1,
+          size: 3 + Math.random() * 3,
+          decay: 0.02 + Math.random() * 0.02
+        });
+      }
+    }
+    function updateParticles() {
+      fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1;
+        p.alpha -= p.decay;
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        fxCtx.save();
+        fxCtx.globalAlpha = p.alpha;
+        fxCtx.fillStyle = p.color;
+        fxCtx.beginPath();
+        fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        fxCtx.fill();
+        fxCtx.restore();
+      }
+      requestAnimationFrame(updateParticles);
+    }
+    updateParticles();
+
+    const State = {
+      deck: [],
+      flipped: [],
+      matchedPairs: 0,
+      turn: 1,
+      scores: { 1: 0, 2: 0 },
+      locked: false
+    };
+
+    const gridEl = document.getElementById('grid');
+    const bannerEl = document.getElementById('banner');
+    const p1Card = document.getElementById('p1Card');
+    const p2Card = document.getElementById('p2Card');
+    const p1ScoreEl = document.getElementById('p1Score');
+    const p2ScoreEl = document.getElementById('p2Score');
+    const p1Tip = document.getElementById('p1TurnTip');
+    const p2Tip = document.getElementById('p2TurnTip');
+    const modal = document.getElementById('modal');
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function initDeck() {
+      const cards = [];
+      PORTRAIT_TYPES.forEach(item => {
+        cards.push({ id: item.id + '_1', pair: item.id, meta: item, isFlipped: false, isMatched: false, winner: null });
+        cards.push({ id: item.id + '_2', pair: item.id, meta: item, isFlipped: false, isMatched: false, winner: null });
+      });
+      return shuffle(cards);
+    }
+
+    function syncUI() {
+      p1ScoreEl.textContent = State.scores[1];
+      p2ScoreEl.textContent = State.scores[2];
+      if (State.turn === 1) {
+        p1Card.className = 'score-card active-p1';
+        p2Card.className = 'score-card';
+        p1Tip.textContent = '思考行動中...';
+        p2Tip.textContent = '等待對手';
+        bannerEl.innerHTML = '<span style="color:#60a5fa">玩家 A 回合</span>：請翻開兩張相同的人頭牌面';
+      } else {
+        p1Card.className = 'score-card';
+        p2Card.className = 'score-card active-p2';
+        p1Tip.textContent = '等待對手';
+        p2Tip.textContent = '思考行動中...';
+        bannerEl.innerHTML = '<span style="color:#fb7185">玩家 B 回合</span>：請翻開兩張相同的人頭牌面';
+      }
+    }
+
+    function renderCards() {
+      gridEl.innerHTML = '';
+      State.deck.forEach((card, idx) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'card-wrap';
+
+        const inner = document.createElement('div');
+        inner.className = 'card-inner';
+        inner.id = 'inner-' + idx;
+
+        const back = document.createElement('div');
+        back.className = 'card-face card-back';
+        back.innerHTML = '<span class="card-back-icon">?</span>';
+
+        const front = document.createElement('div');
+        front.className = 'card-face card-front';
+
+        const canvas = createPortraitCanvas(card.meta);
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.textContent = card.meta.name;
+
+        front.appendChild(canvas);
+        front.appendChild(title);
+
+        inner.appendChild(back);
+        inner.appendChild(front);
+        wrap.appendChild(inner);
+
+        wrap.addEventListener('click', (e) => onCardClick(idx, e));
+        gridEl.appendChild(wrap);
+      });
+    }
+
+    function onCardClick(index, ev) {
+      audio.unlock();
+      if (State.locked) return;
+
+      const card = State.deck[index];
+      if (card.isFlipped || card.isMatched) return;
+
+      card.isFlipped = true;
+      State.flipped.push({ card, index });
+      audio.flip();
+
+      document.getElementById('inner-' + index).classList.add('is-flipped');
+
+      if (State.flipped.length === 1) {
+        bannerEl.textContent = `${State.turn === 1 ? '玩家 A' : '玩家 B'}：請再翻一張！`;
+        return;
+      }
+
+      if (State.flipped.length === 2) {
+        State.locked = true;
+        const [c1, c2] = State.flipped;
+        const rect = ev.currentTarget.getBoundingClientRect();
+        const clickX = rect.left + rect.width / 2;
+        const clickY = rect.top + rect.height / 2;
+
+        if (c1.card.pair === c2.card.pair) {
+          setTimeout(() => {
+            c1.card.isMatched = true;
+            c2.card.isMatched = true;
+            c1.card.winner = State.turn;
+            c2.card.winner = State.turn;
+
+            State.scores[State.turn] += 1;
+            State.matchedPairs += 1;
+
+            audio.match();
+            spawnBurst(clickX, clickY, State.turn === 1 ? '#3b82f6' : '#f43f5e');
+
+            const classToAdd = State.turn === 1 ? 'matched-p1' : 'matched-p2';
+            document.getElementById('inner-' + c1.index).children[1].classList.add(classToAdd);
+            document.getElementById('inner-' + c2.index).children[1].classList.add(classToAdd);
+
+            bannerEl.innerHTML = `🎉 <b>${State.turn === 1 ? '玩家 A' : '玩家 B'} 配對成功！得 1 分且保留行動！</b>`;
+            State.flipped = [];
+            State.locked = false;
+            syncUI();
+
+            if (State.matchedPairs === 8) {
+              setTimeout(showWinner, 500);
+            }
+          }, 400);
+        } else {
+          setTimeout(() => audio.mismatch(), 350);
+          setTimeout(() => {
+            c1.card.isFlipped = false;
+            c2.card.isFlipped = false;
+            document.getElementById('inner-' + c1.index).classList.remove('is-flipped');
+            document.getElementById('inner-' + c2.index).classList.remove('is-flipped');
+
+            State.turn = State.turn === 1 ? 2 : 1;
+            State.flipped = [];
+            State.locked = false;
+            syncUI();
+          }, 1000);
+        }
+      }
+    }
+
+    function showWinner() {
+      audio.win();
+      for (let i = 0; i < 4; i++) {
+        setTimeout(() => spawnBurst(window.innerWidth * (0.2 + i * 0.2), window.innerHeight * 0.4, '#fbbf24'), i * 150);
+      }
+      const title = document.getElementById('modalTitle');
+      const desc = document.getElementById('modalDesc');
+      const icon = document.getElementById('modalIcon');
+
+      if (State.scores[1] > State.scores[2]) {
+        icon.textContent = '👑';
+        title.textContent = '玩家 A 奪冠！';
+        title.style.color = '#60a5fa';
+        desc.textContent = `最終比數 ${State.scores[1]} 比 ${State.scores[2]}，超群記憶力！`;
+      } else if (State.scores[2] > State.scores[1]) {
+        icon.textContent = '👑';
+        title.textContent = '玩家 B 奪冠！';
+        title.style.color = '#fb7185';
+        desc.textContent = `最終比數 ${State.scores[2]} 比 ${State.scores[1]}，逆轉致勝！`;
+      } else {
+        icon.textContent = '🤝';
+        title.textContent = '平手！';
+        title.style.color = '#fbbf24';
+        desc.textContent = `比數 ${State.scores[1]} 比 ${State.scores[2]}，旗鼓相當！`;
+      }
+      modal.classList.add('open');
+    }
+
+    function startNewGame() {
+      modal.classList.remove('open');
+      State.deck = initDeck();
+      State.flipped = [];
+      State.matchedPairs = 0;
+      State.turn = 1;
+      State.scores = { 1: 0, 2: 0 };
+      State.locked = false;
+      syncUI();
+      renderCards();
+    }
+
+    document.getElementById('restartBtn').addEventListener('click', startNewGame);
+    document.getElementById('modalRestartBtn').addEventListener('click', startNewGame);
+    document.getElementById('soundToggle').addEventListener('click', () => {
+      audio.enabled = !audio.enabled;
+      document.getElementById('soundToggle').textContent = audio.enabled ? '🔊 音效: 開' : '🔇 音效: 關';
+    });
+
+    startNewGame();
+  </script>
+</body>
+</html>
