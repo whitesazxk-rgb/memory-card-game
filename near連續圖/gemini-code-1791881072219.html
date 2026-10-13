@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>名人對決：記憶翻牌大作戰 (雙人對戰版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    .transform-style-3d {
+      transform-style: preserve-3d;
+    }
+    .backface-hidden {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .rotate-y-180 {
+      transform: rotateY(180deg);
+    }
+    @keyframes pulse-glow-p1 {
+      0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6), inset 0 0 10px rgba(59, 130, 246, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.9), inset 0 0 15px rgba(59, 130, 246, 0.5); }
+    }
+    @keyframes pulse-glow-p2 {
+      0%, 100% { box-shadow: 0 0 15px rgba(244, 63, 94, 0.6), inset 0 0 10px rgba(244, 63, 94, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(244, 63, 94, 0.9), inset 0 0 15px rgba(244, 63, 94, 0.5); }
+    }
+    .active-p1 {
+      animation: pulse-glow-p1 1.6s infinite ease-in-out;
+      border-color: #3b82f6 !important;
+    }
+    .active-p2 {
+      animation: pulse-glow-p2 1.6s infinite ease-in-out;
+      border-color: #f43f5e !important;
+    }
+    .card-matched-p1 {
+      box-shadow: 0 0 18px #3b82f6 !important;
+      border: 3px solid #60a5fa !important;
+    }
+    .card-matched-p2 {
+      box-shadow: 0 0 18px #f43f5e !important;
+      border: 3px solid #fb7185 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 overflow-x-hidden">
+
+  <!-- 背景粒子層 -->
+  <canvas id="particleCanvas" class="fixed inset-0 pointer-events-none z-40"></canvas>
+
+  <!-- 頂部資訊列與計分板 -->
+  <header class="w-full max-w-4xl flex flex-col items-center gap-3 mt-1">
+    <div class="flex items-center justify-between w-full px-2">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🃏</span>
+        <h1 class="text-xl sm:text-2xl font-black tracking-wider bg-gradient-to-r from-blue-400 via-purple-300 to-rose-400 bg-clip-text text-transparent">
+          MEMORY BATTLE 雙人記憶對戰
+        </h1>
+      </div>
+      <button id="btnSoundToggle" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm font-semibold border border-slate-700 flex items-center gap-1 transition-colors">
+        <span id="soundIcon">🔊</span> <span id="soundText">音效: 開</span>
+      </button>
+    </div>
+
+    <!-- 玩家對戰資訊面板 -->
+    <div class="grid grid-cols-2 gap-3 sm:gap-6 w-full px-2">
+      <!-- Player A -->
+      <div id="panelP1" class="relative bg-slate-900/90 rounded-2xl p-3 sm:p-4 border-2 border-slate-800 transition-all duration-300 flex items-center justify-between overflow-hidden">
+        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block animate-ping"></span>
+            <span class="text-xs sm:text-sm font-bold tracking-wider text-blue-400 uppercase">玩家 A (Player 1)</span>
+          </div>
+          <span id="labelTurnP1" class="text-[11px] sm:text-xs text-blue-300 font-medium mt-0.5">當前回合思考中...</span>
+        </div>
+        <div class="flex items-baseline gap-1">
+          <span id="scoreP1" class="text-3xl sm:text-4xl font-black text-blue-400 font-mono">0</span>
+          <span class="text-xs text-slate-400 font-bold">分</span>
+        </div>
+      </div>
+
+      <!-- Player B -->
+      <div id="panelP2" class="relative bg-slate-900/90 rounded-2xl p-3 sm:p-4 border-2 border-slate-800 transition-all duration-300 flex items-center justify-between overflow-hidden opacity-60">
+        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+            <span class="text-xs sm:text-sm font-bold tracking-wider text-rose-400 uppercase">玩家 B (Player 2)</span>
+          </div>
+          <span id="labelTurnP2" class="text-[11px] sm:text-xs text-slate-400 font-medium mt-0.5">等待對手行動</span>
+        </div>
+        <div class="flex items-baseline gap-1">
+          <span id="scoreP2" class="text-3xl sm:text-4xl font-black text-rose-400 font-mono">0</span>
+          <span class="text-xs text-slate-400 font-bold">分</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 遊戲主要戰局區域 (4x4 卡牌矩陣) -->
+  <main class="w-full max-w-xl flex-1 flex flex-col items-center justify-center my-3 px-2">
+    <!-- 牌桌網格 -->
+    <div id="cardGrid" class="grid grid-cols-4 gap-2 sm:gap-3 w-full aspect-square max-w-[500px] p-2 bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl shadow-black/80">
+      <!-- 16張卡牌由 JavaScript 動態生成渲染 -->
+    </div>
+
+    <!-- 即時局勢提示文字條 -->
+    <div id="statusBanner" class="mt-3 text-center text-xs sm:text-sm font-bold tracking-wide text-slate-300 bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-700/80 shadow">
+      輪到玩家 A 翻開第 1 張牌
+    </div>
+  </main>
+
+  <!-- 底部功能列 -->
+  <footer class="w-full max-w-xl flex items-center justify-between pb-3 px-3 text-xs text-slate-400">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+      <span>配對成功得 1 分且保留行動；翻錯換人</span>
+    </div>
+    <button id="btnRestart" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition font-bold active:scale-95">
+      重新洗牌開局
+    </button>
+  </footer>
+
+  <!-- 結算彈窗 Modal -->
+  <div id="modalGameOver" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl transform transition-all scale-95 duration-200">
+      <div id="modalWinnerTrophy" class="text-6xl mb-3">🏆</div>
+      <h2 id="modalTitle" class="text-2xl sm:text-3xl font-black text-amber-400 mb-2">玩家 A 獲勝！</h2>
+      <p id="modalDesc" class="text-sm text-slate-300 mb-6">神級記憶力！完美奪下勝局！</p>
+      
+      <!-- 比分對照 -->
+      <div class="grid grid-cols-2 gap-3 bg-slate-950/80 p-4 rounded-xl border border-slate-800 mb-6">
+        <div class="flex flex-col">
+          <span class="text-xs text-blue-400 font-bold">玩家 A 得分</span>
+          <span id="finalScoreP1" class="text-2xl font-black text-blue-400 mt-1">0</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-xs text-rose-400 font-bold">玩家 B 得分</span>
+          <span id="finalScoreP2" class="text-2xl font-black text-rose-400 mt-1">0</span>
+        </div>
+      </div>
+
+      <button id="btnModalRestart" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-rose-600 hover:from-blue-500 hover:to-rose-500 text-white font-black text-base shadow-lg shadow-indigo-600/40 active:scale-95 transition-all">
+        再來一局新對決
+      </button>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       1. 遊戲素材與全域常數定義 (精確對應提供的人頭照片與名稱)
+       ========================================================================== */
+    const PHOTO_ASSETS = [
+      { id: 'near01', name: '正面凝視', file: 'NEAR01.jpg', altFile: 'NEAR01_2.jpg' },
+      { id: 'near02', name: '側臉微側', file: 'near02.jpg', altFile: 'near02_2.jpg' },
+      { id: 'near03', name: '抬頭注視', file: 'near03.jpg', altFile: 'near03_2.jpg' },
+      { id: 'near04', name: '仰角微張', file: 'near04.jpg', altFile: 'near04_2.jpg' },
+      { id: 'near05', name: '手勢托腮', file: 'near05.jpg', altFile: 'near05_2.jpg' },
+      { id: 'near06', name: '自信微笑', file: 'near06.jpg', altFile: 'near06_2.jpg' },
+      { id: 'near07', name: '驚訝大呼', file: 'near07.jpg', altFile: 'near07_2.jpg' },
+      { id: 'near08', name: '生動對談', file: 'near08.jpg', altFile: 'near08_2.jpg' }
+    ];
+
+    /* ==========================================================================
+       2. Web Audio API 程式化合成音效引擎 (零外部依賴、防瀏覽器 Autoplay 攔截)
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTone(freq, type = 'sine', duration = 0.15, gainVal = 0.2) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {
+          console.warn('音訊播放抑制', e);
+        }
+      }
+      flip() {
+        this.playTone(480, 'triangle', 0.08, 0.15);
+      }
+      match() {
+        if (!this.enabled) return;
+        this.init();
+        // 悅耳和弦 arpeggio
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          setTimeout(() => this.playTone(freq, 'sine', 0.25, 0.18), idx * 70);
+        });
+      }
+      mismatch() {
+        if (!this.enabled) return;
+        this.init();
+        this.playTone(220, 'sawtooth', 0.15, 0.12);
+        setTimeout(() => this.playTone(174.61, 'sawtooth', 0.22, 0.12), 110);
+      }
+      victory() {
+        if (!this.enabled) return;
+        this.init();
+        const melody = [
+          { f: 523.25, d: 0.12 },
+          { f: 659.25, d: 0.12 },
+          { f: 783.99, d: 0.12 },
+          { f: 1046.50, d: 0.4 }
+        ];
+        let delay = 0;
+        melody.forEach(note => {
+          setTimeout(() => this.playTone(note.f, 'triangle', note.d, 0.22), delay);
+          delay += note.d * 1000 * 0.9;
+        });
+      }
+    }
+    const sound = new SoundEngine();
+
+    /* ==========================================================================
+       3. Canvas 粒子動畫系統 (配對成功火花 & 完賽彩帶禮花)
+       ========================================================================== */
+    class ParticleEngine {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.particles = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.loop();
+      }
+      resize() {
+        this.width = this.canvas.width = window.innerWidth;
+        this.height = this.canvas.height = window.innerHeight;
+      }
+      burst(x, y, color = '#38bdf8', count = 25) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2 + Math.random() * 6;
+          this.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1.5,
+            color: color,
+            alpha: 1,
+            size: 3 + Math.random() * 4,
+            decay: 0.02 + Math.random() * 0.02,
+            gravity: 0.12
+          });
+        }
+      }
+      confettiBurst() {
+        const colors = ['#3b82f6', '#f43f5e', '#fbbf24', '#34d399', '#a855f7'];
+        for (let i = 0; i < 90; i++) {
+          this.particles.push({
+            x: this.width * (0.2 + Math.random() * 0.6),
+            y: this.height * 0.4,
+            vx: (Math.random() - 0.5) * 12,
+            vy: -4 - Math.random() * 8,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            alpha: 1,
+            size: 4 + Math.random() * 6,
+            decay: 0.01 + Math.random() * 0.015,
+            gravity: 0.18
+          });
+        }
+      }
+      loop() {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += p.gravity;
+          p.alpha -= p.decay;
+          if (p.alpha <= 0) {
+            this.particles.splice(i, 1);
+            continue;
+          }
+          this.ctx.save();
+          this.ctx.globalAlpha = p.alpha;
+          this.ctx.fillStyle = p.color;
+          this.ctx.beginPath();
+          this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.restore();
+        }
+        requestAnimationFrame(() => this.loop());
+      }
+    }
+    const particles = new ParticleEngine('particleCanvas');
+
+    /* ==========================================================================
+       4. 雙人記憶對戰遊戲狀態機與核心邏輯
+       ========================================================================== */
+    const State = {
+      cards: [],
+      flippedCards: [],
+      matchedPairs: 0,
+      turn: 1, // 1: 玩家 A, 2: 玩家 B
+      scores: { 1: 0, 2: 0 },
+      isLockInput: false
+    };
+
+    // DOM 元素快取
+    const gridEl = document.getElementById('cardGrid');
+    const panelP1 = document.getElementById('panelP1');
+    const panelP2 = document.getElementById('panelP2');
+    const scoreP1El = document.getElementById('scoreP1');
+    const scoreP2El = document.getElementById('scoreP2');
+    const labelTurnP1 = document.getElementById('labelTurnP1');
+    const labelTurnP2 = document.getElementById('labelTurnP2');
+    const statusBanner = document.getElementById('statusBanner');
+    const modalGameOver = document.getElementById('modalGameOver');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+    const finalScoreP1 = document.getElementById('finalScoreP1');
+    const finalScoreP2 = document.getElementById('finalScoreP2');
+    const modalWinnerTrophy = document.getElementById('modalWinnerTrophy');
+    const btnRestart = document.getElementById('btnRestart');
+    const btnModalRestart = document.getElementById('btnModalRestart');
+    const btnSoundToggle = document.getElementById('btnSoundToggle');
+    const soundText = document.getElementById('soundText');
+    const soundIcon = document.getElementById('soundIcon');
+
+    // 洗牌演算法 (Fisher-Yates)
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // 初始化牌組 (8種真人頭像 * 2 = 16張牌)
+    function generateDeck() {
+      const cardPairs = [];
+      PHOTO_ASSETS.forEach(item => {
+        // 卡牌 A
+        cardPairs.push({
+          uid: item.id + '_a',
+          pairId: item.id,
+          name: item.name,
+          primarySrc: item.file,
+          fallbackSrc: item.altFile,
+          isFlipped: false,
+          isMatched: false,
+          matchedBy: null
+        });
+        // 卡牌 B
+        cardPairs.push({
+          uid: item.id + '_b',
+          pairId: item.id,
+          name: item.name,
+          primarySrc: item.file,
+          fallbackSrc: item.altFile,
+          isFlipped: false,
+          isMatched: false,
+          matchedBy: null
+        });
+      });
+      return shuffle(cardPairs);
+    }
+
+    // 更新介面狀態 (回合輪替與得分)
+    function updateUIState() {
+      scoreP1El.textContent = State.scores[1];
+      scoreP2El.textContent = State.scores[2];
+
+      if (State.turn === 1) {
+        panelP1.classList.add('active-p1');
+        panelP1.classList.remove('opacity-60');
+        panelP2.classList.remove('active-p2');
+        panelP2.classList.add('opacity-60');
+
+        labelTurnP1.textContent = '當前回合行動中...';
+        labelTurnP2.textContent = '等待對手行動';
+        statusBanner.innerHTML = `<span class="text-blue-400">玩家 A 回合</span>：請翻開兩張相同的人頭牌面`;
+      } else {
+        panelP2.classList.add('active-p2');
+        panelP2.classList.remove('opacity-60');
+        panelP1.classList.remove('active-p1');
+        panelP1.classList.add('opacity-60');
+
+        labelTurnP2.textContent = '當前回合行動中...';
+        labelTurnP1.textContent = '等待對手行動';
+        statusBanner.innerHTML = `<span class="text-rose-400">玩家 B 回合</span>：請翻開兩張相同的人頭牌面`;
+      }
+    }
+
+    // 渲染卡牌元件
+    function renderBoard() {
+      gridEl.innerHTML = '';
+      State.cards.forEach((card, index) => {
+        const cardContainer = document.createElement('div');
+        cardContainer.className = 'w-full h-full perspective-1000 cursor-pointer select-none';
+        cardContainer.dataset.index = index;
+
+        const cardInner = document.createElement('div');
+        cardInner.className = `w-full h-full relative transform-style-3d transition-transform duration-500 rounded-xl shadow-md ${
+          card.isFlipped ? 'rotate-y-180' : ''
+        }`;
+        cardInner.id = `card-inner-${index}`;
+
+        // 卡牌背面 (未翻開面)
+        const cardBack = document.createElement('div');
+        cardBack.className = 'absolute inset-0 w-full h-full backface-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 rounded-xl border border-slate-700/80 flex flex-col items-center justify-center p-1 hover:border-slate-500 transition-all shadow-inner';
+        cardBack.innerHTML = `
+          <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full border border-indigo-500/40 bg-indigo-900/30 flex items-center justify-center text-indigo-400 text-sm sm:text-base font-bold shadow-inner">
+            ?
+          </div>
+          <span class="text-[9px] sm:text-[11px] text-slate-500 font-bold mt-1 tracking-widest uppercase">CARD</span>
+        `;
+
+        // 卡牌正面 (翻開面 - 嚴格放置真實人頭照片)
+        const cardFront = document.createElement('div');
+        let matchedStyle = '';
+        if (card.isMatched) {
+          matchedStyle = card.matchedBy === 1 ? 'card-matched-p1' : 'card-matched-p2';
+        }
+
+        cardFront.className = `absolute inset-0 w-full h-full backface-hidden rotate-y-180 bg-slate-900 rounded-xl border-2 border-slate-700 overflow-hidden flex flex-col items-center justify-center ${matchedStyle}`;
+        
+        // 圖片節點：首選原圖，發生錯誤自動降級載入次選檔案
+        const img = document.createElement('img');
+        img.src = card.primarySrc;
+        img.alt = card.name;
+        img.className = 'w-full h-full object-cover rounded-lg pointer-events-none transition-transform duration-300';
+        img.loading = 'eager';
+        
+        // 容錯備援機制：確保即使本機檔名大小寫差異也能正常加載
+        img.onerror = function() {
+          if (this.src !== card.fallbackSrc) {
+            this.src = card.fallbackSrc;
+          }
+        };
+
+        // 配對標籤或名稱徽章
+        const caption = document.createElement('div');
+        caption.className = 'absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-3 pb-1 text-center';
+        caption.innerHTML = `<span class="text-[10px] sm:text-xs font-bold text-slate-200 tracking-wider drop-shadow">${card.name}</span>`;
+
+        cardFront.appendChild(img);
+        cardFront.appendChild(caption);
+
+        cardInner.appendChild(cardBack);
+        cardInner.appendChild(cardFront);
+        cardContainer.appendChild(cardInner);
+
+        // 綁定點擊事件
+        cardContainer.addEventListener('click', (e) => onCardClick(index, e));
+
+        gridEl.appendChild(cardContainer);
+      });
+    }
+
+    // 點擊卡牌處理
+    function onCardClick(index, event) {
+      sound.init(); // 觸發 Web Audio 解鎖
+
+      if (State.isLockInput) return;
+      const card = State.cards[index];
+      if (card.isFlipped || card.isMatched) return;
+
+      // 翻開此牌
+      card.isFlipped = true;
+      State.flippedCards.push({ card, index });
+      sound.flip();
+
+      const cardInner = document.getElementById(`card-inner-${index}`);
+      if (cardInner) {
+        cardInner.classList.add('rotate-y-180');
+      }
+
+      // 若翻了第一張
+      if (State.flippedCards.length === 1) {
+        const currentName = State.turn === 1 ? '玩家 A' : '玩家 B';
+        statusBanner.innerHTML = `<span class="${State.turn === 1 ? 'text-blue-400' : 'text-rose-400'}">${currentName}</span>：請再翻一張牌進行比對！`;
+        return;
+      }
+
+      // 若翻了兩張，進入判定鎖定
+      if (State.flippedCards.length === 2) {
+        State.isLockInput = true;
+        checkPairMatch(event);
+      }
+    }
+
+    // 比對兩張牌的核心邏輯
+    function checkPairMatch(event) {
+      const [first, second] = State.flippedCards;
+      const isMatch = first.card.pairId === second.card.pairId;
+
+      if (isMatch) {
+        // 配對成功！
+        setTimeout(() => {
+          first.card.isMatched = true;
+          second.card.isMatched = true;
+          first.card.matchedBy = State.turn;
+          second.card.matchedBy = State.turn;
+
+          State.scores[State.turn] += 1;
+          State.matchedPairs += 1;
+
+          // 視覺與音效回饋
+          sound.match();
+          const rect = event ? event.target.getBoundingClientRect() : { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 };
+          const pColor = State.turn === 1 ? '#60a5fa' : '#fb7185';
+          particles.burst(rect.left + 40, rect.top + 40, pColor, 35);
+
+          // 卡牌增加發光外框
+          const inner1 = document.getElementById(`card-inner-${first.index}`);
+          const inner2 = document.getElementById(`card-inner-${second.index}`);
+          const matchClass = State.turn === 1 ? 'card-matched-p1' : 'card-matched-p2';
+          if (inner1) inner1.children[1].classList.add(matchClass);
+          if (inner2) inner2.children[1].classList.add(matchClass);
+
+          // 提示：翻對可繼續行動
+          const pName = State.turn === 1 ? '玩家 A' : '玩家 B';
+          statusBanner.innerHTML = `🎉 <span class="${State.turn === 1 ? 'text-blue-400' : 'text-rose-400'} font-black">${pName} 配對成功！得 1 分且保留行動權！</span>`;
+
+          State.flippedCards = [];
+          State.isLockInput = false;
+          updateUIState();
+
+          // 判定是否通關完賽 (8組全部配對完成)
+          if (State.matchedPairs === 8) {
+            handleGameOver();
+          }
+        }, 550);
+
+      } else {
+        // 配對失敗：暫停 1 秒讓雙方記憶，翻回背面並換人
+        setTimeout(() => {
+          sound.mismatch();
+          statusBanner.innerHTML = `❌ 配對不符，換對手進行！`;
+        }, 600);
+
+        setTimeout(() => {
+          first.card.isFlipped = false;
+          second.card.isFlipped = false;
+
+          const inner1 = document.getElementById(`card-inner-${first.index}`);
+          const inner2 = document.getElementById(`card-inner-${second.index}`);
+          if (inner1) inner1.classList.remove('rotate-y-180');
+          if (inner2) inner2.classList.remove('rotate-y-180');
+
+          // 回合權轉移 (Player 1 <-> Player 2)
+          State.turn = State.turn === 1 ? 2 : 1;
+          State.flippedCards = [];
+          State.isLockInput = false;
+          updateUIState();
+        }, 1300);
+      }
+    }
+
+    // 遊戲結算
+    function handleGameOver() {
+      setTimeout(() => {
+        sound.victory();
+        particles.confettiBurst();
+
+        finalScoreP1.textContent = State.scores[1];
+        finalScoreP2.textContent = State.scores[2];
+
+        if (State.scores[1] > State.scores[2]) {
+          modalWinnerTrophy.textContent = '👑';
+          modalTitle.textContent = '玩家 A 奪得勝利！';
+          modalTitle.className = 'text-2xl sm:text-3xl font-black text-blue-400 mb-2';
+          modalDesc.textContent = '犀利眼力與神速記憶，橫掃全場牌局！';
+        } else if (State.scores[2] > State.scores[1]) {
+          modalWinnerTrophy.textContent = '👑';
+          modalTitle.textContent = '玩家 B 奪得勝利！';
+          modalTitle.className = 'text-2xl sm:text-3xl font-black text-rose-400 mb-2';
+          modalDesc.textContent = '精彩逆轉勝！完全掌控了每張牌的位置！';
+        } else {
+          modalWinnerTrophy.textContent = '🤝';
+          modalTitle.textContent = '勢均力敵，平手！';
+          modalTitle.className = 'text-2xl sm:text-3xl font-black text-amber-400 mb-2';
+          modalDesc.textContent = '雙方實力旗鼓相當，再開一局分出高下吧！';
+        }
+
+        modalGameOver.classList.remove('hidden');
+      }, 700);
+    }
+
+    // 重設開局
+    function initGame() {
+      State.cards = generateDeck();
+      State.flippedCards = [];
+      State.matchedPairs = 0;
+      State.turn = 1;
+      State.scores = { 1: 0, 2: 0 };
+      State.isLockInput = false;
+
+      modalGameOver.classList.add('hidden');
+      updateUIState();
+      renderBoard();
+    }
+
+    // 事件監聽綁定
+    btnRestart.addEventListener('click', () => {
+      sound.init();
+      initGame();
+    });
+
+    btnModalRestart.addEventListener('click', () => {
+      sound.init();
+      initGame();
+    });
+
+    btnSoundToggle.addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      if (sound.enabled) {
+        soundIcon.textContent = '🔊';
+        soundText.textContent = '音效: 開';
+      } else {
+        soundIcon.textContent = '🔇';
+        soundText.textContent = '音效: 關';
+      }
+    });
+
+    // 啟動開局
+    initGame();
+  </script>
+</body>
+</html>
